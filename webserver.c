@@ -17,36 +17,46 @@ void error_handling(char *message);
 
 int main(int argc, char *argv[])
 {
-    int serv_sock, clnt_sock;
-    struct sockaddr_in serv_adr, clnt_adr;
+    int serv_sock, clnt_sock;//声明套接字
+    struct sockaddr_in serv_adr, clnt_adr;//用来bind的结构体
     int clnt_adr_size;
     char buf[BUF_SIZE];
-    pthread_t t_id;
+    pthread_t t_id;//声明线程
     if (argc != 2)
     {
         printf("Usage : %s <port>\n", argv[0]);
         exit(1);
     }
 
-    serv_sock = socket(PF_INET, SOCK_STREAM, 0);
-    memset(&serv_adr, 0, sizeof(serv_adr));
-    serv_adr.sin_family = AF_INET;
-    serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_adr.sin_port = htons(atoi(argv[1]));
+    //创建套接字
+    serv_sock = socket(PF_INET, SOCK_STREAM, 0);//TCP套接字
+
+    memset(&serv_adr, 0, sizeof(serv_adr));//结构体清空
+    serv_adr.sin_family = AF_INET;//IPv4协议簇
+    serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);//本地IP 127.0.0.1 ，并进行字节序转换（主机字节序 to 网络字节序）
+    serv_adr.sin_port = htons(atoi(argv[1]));//端口字节序转换
+
+    //绑定套接字
     if (bind(serv_sock, (struct sockaddr *)&serv_adr, sizeof(serv_adr)) == -1)
         error_handling("bind() error");
-    if (listen(serv_sock, 20) == -1)
+
+    //监听套接字 
+    if (listen(serv_sock, 20) == -1)//20：请求连接队列的长度
         error_handling("listen() error");
 
     while (1)
     {
         clnt_adr_size = sizeof(clnt_adr);
+        //提取套接字
         clnt_sock = accept(serv_sock, (struct sockaddr *)&clnt_adr, &clnt_adr_size);
-        printf("Connection Request : %s:%d\n",
-               inet_ntoa(clnt_adr.sin_addr), ntohs(clnt_adr.sin_port));
+        printf("Connection Request : %s:%d\n",inet_ntoa(clnt_adr.sin_addr), ntohs(clnt_adr.sin_port));
+
+        //创建提取套接字对应的线程
         pthread_create(&t_id, NULL, request_handler, &clnt_sock);
+        //销毁线程
         pthread_detach(t_id);
     }
+    //关闭套接字
     close(serv_sock);
     return 0;
 }
@@ -55,6 +65,7 @@ void *request_handler(void *arg)
 {
     int clnt_sock = *((int *)arg);
     char req_line[SMALL_BUF];
+
     FILE *clnt_read;
     FILE *clnt_write;
 
@@ -130,6 +141,7 @@ char *content_type(char *file)
     else
         return "text/plain";
 }
+//返回出错信息
 void send_error(FILE *fp)
 {
     char protocol[] = "HTTP/1.0 400 Bad Request\r\n";
@@ -145,6 +157,8 @@ void send_error(FILE *fp)
     fputs(cnt_type, fp);
     fflush(fp);
 }
+
+//输出错误信息
 void error_handling(char *message)
 {
     fputs(message, stderr);
