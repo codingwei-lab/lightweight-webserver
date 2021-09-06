@@ -1,4 +1,4 @@
-# This is my werserver project,I'm very happy to share code-lover
+# This is my werserver project,I'm very happy to share the code
 
 Tips:
 yon can run the project by the follow steps.
